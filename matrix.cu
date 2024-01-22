@@ -76,10 +76,25 @@ int main() {
     dim3 blockDim(16, 16);
     dim3 gridDim((P + blockDim.x - 1) / blockDim.x, (M + blockDim.y - 1) / blockDim.y);
 
+
+    cudaEvent_t start, stop;
+
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     // Launch the matrix multiplication kernel for each pair of matrices
     for (int k = 0; k < K; ++k) {
         matrixMultiplication<<<gridDim, blockDim>>>(d_A + k * M * N, d_B + k * N * P, d_C + k * M * P, M, N, P);
     }
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milli = 0.0f;
+
+    cudaEventElapsedTime(&milli, start, stop);
 
     // Copy the result back to the host
     cudaMemcpy(h_C, d_C, K * M * P * sizeof(int), cudaMemcpyDeviceToHost);
@@ -88,6 +103,8 @@ int main() {
     for (int k = 0; k < K; ++k) {
         printMatrix(h_C + k * M * P, M, P, ("Result Matrix" + std::to_string(k)).c_str());
     }
+
+    cout << "time taken " <<milli;
 
     // Free device and host memory
     cudaFree(d_A);
